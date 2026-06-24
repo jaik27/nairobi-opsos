@@ -40,9 +40,17 @@ font Inter; rounded 22px panels; mobile-first. (Full system in the RFC/IA.)
 - **TypeScript strict; functional components; named exports; keep components small.**
 - **Scope discipline:** ship one vertical end-to-end before widening. Don't gold-plate.
 
-## Current goal — the walking skeleton
-1. Scaffold `apps/web` so it runs locally (`npm run dev`) showing a cockpit shell.
-2. Render a stock list from mock data first (no backend yet).
-3. Then wire Supabase to read the real `stock_items` table.
-4. Then deploy to Cloudflare Pages.
-Work in that order. Stop and show me after each step.
+## Current state (updated 2026-06-24)
+Walking skeleton DONE. apps/web runs locally (`npm run dev`) — dark cockpit shell,
+Mission Control screen reading 8 mock stock items from src/data/stockItems.ts
+(typed to mirror stock_items / v_stock_on_hand). Repo published to GitHub:
+jaik27/nairobi-opsos, committed on main.
+
+## Next step
+Wire Supabase: stand up the project, push supabase/migrations/001_procurement_core.sql,
+then swap the mock array in src/data/stockItems.ts for a live stock_items read.
+Mock fields already match the schema, so this is a drop-in swap.
+
+## After that
+Build one screen end-to-end with live data, then port UX patterns from the old
+Apps Script Command Station (reference only — port FROM, don't paste IN).
