@@ -2,6 +2,8 @@
 
 Read this first, every session. Then read `/docs` for full context
 (start with `03_Technical_Design_RFC.md` and `04_Information_Architecture.md`).
+For the lived history — decisions, working style, the Command Station vs Control
+Tower distinction, and the Drive artifact map — read docs/CONTEXT_PACK.md.
 
 ## What this is
 Nairobi OpsOS — a consulting-led digital operations & AI automation platform for
