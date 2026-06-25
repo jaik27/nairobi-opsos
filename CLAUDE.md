@@ -40,17 +40,21 @@ font Inter; rounded 22px panels; mobile-first. (Full system in the RFC/IA.)
 - **TypeScript strict; functional components; named exports; keep components small.**
 - **Scope discipline:** ship one vertical end-to-end before widening. Don't gold-plate.
 
-## Current state (updated 2026-06-24)
-Walking skeleton DONE. apps/web runs locally (`npm run dev`) — dark cockpit shell,
-Mission Control screen reading 8 mock stock items from src/data/stockItems.ts
-(typed to mirror stock_items / v_stock_on_hand). Repo published to GitHub:
-jaik27/nairobi-opsos, committed on main.
+## Current state (updated 2026-06-25)
+Supabase is live. Project created, 001_procurement_core.sql and 002_demo_seed.sql
+both run. apps/web reads real data: src/lib/supabaseClient.ts (anon key from
+.env, gitignored; .env.example checked in) and src/data/stockItems.ts now fetch
+stock_items (master fields) + v_stock_on_hand (derived on_hand) and merge by id,
+instead of a mock array. Mission Control shows loading/empty/error states.
+Verified in a real browser against the live demo org (4 SKUs, correct on-hand
+qty, reorder alerts, stock value) — desktop + mobile viewports, no console errors.
 
 ## Next step
-Wire Supabase: stand up the project, push supabase/migrations/001_procurement_core.sql,
-then swap the mock array in src/data/stockItems.ts for a live stock_items read.
-Mock fields already match the schema, so this is a drop-in swap.
+Build one more screen end-to-end with live data (Stores → Stock on Hand or
+Procurement → Purchase Requests are the natural next vertical slices — see
+`04_Information_Architecture.md` §7 screen inventory). Then deploy apps/web to
+Cloudflare Pages with VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY as build env vars.
 
 ## After that
-Build one screen end-to-end with live data, then port UX patterns from the old
-Apps Script Command Station (reference only — port FROM, don't paste IN).
+Port UX patterns from the old Apps Script Command Station (reference only — port
+FROM, don't paste IN). Then n8n nightly reorder-alert digest (see SETUP_RUNBOOK.md §5).
