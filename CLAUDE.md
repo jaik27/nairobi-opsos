@@ -50,20 +50,26 @@ font Inter; rounded 22px panels; mobile-first. (Full system in the RFC/IA.)
 - **TypeScript strict; functional components; named exports; keep components small.**
 - **Scope discipline:** ship one vertical end-to-end before widening. Don't gold-plate.
 
-## Current state (updated 2026-06-25)
-Supabase is live. Project created, 001_procurement_core.sql and 002_demo_seed.sql
-both run. apps/web reads real data: src/lib/supabaseClient.ts (anon key from
-.env, gitignored; .env.example checked in) and src/data/stockItems.ts now fetch
-stock_items (master fields) + v_stock_on_hand (derived on_hand) and merge by id,
-instead of a mock array. Mission Control shows loading/empty/error states.
-Verified in a real browser against the live demo org (4 SKUs, correct on-hand
-qty, reorder alerts, stock value) — desktop + mobile viewports, no console errors.
+## Current state (updated 2026-06-26)
+Three screens live on Supabase: Mission Control, Stores (search + sort over
+stock_items/v_stock_on_hand), and now Procurement → Purchase Requests. Migration
+004_demo_write_policies.sql adds narrow anon INSERT policies (demo org only,
+same is_demo fence as 002's reads) on purchase_requests + purchase_request_lines
+— apps/web's first real write-path. src/data/purchaseRequests.ts fetches PRs with
+an embedded line count and creates a PR (status defaults 'draft') then its lines
+in two inserts; src/lib/demoOrg.ts looks up the demo org id rather than hardcoding
+it. Procurement screen = list + create form (stock-item picker or free-text line),
+list refreshes after a successful create. Verified live: existing seed PR-2026-001
+reads correctly; created a PR with one stock-item line + one free-text line,
+confirmed in the DB (org_id correctly fenced to the demo org), zero console errors.
+pr_number is a client-side timestamp — a known demo shortcut, not final numbering,
+to revisit once real PR numbering is designed.
 
 ## Next step
-Build one more screen end-to-end with live data (Stores → Stock on Hand or
-Procurement → Purchase Requests are the natural next vertical slices — see
-`04_Information_Architecture.md` §7 screen inventory). Then deploy apps/web to
-Cloudflare Pages with VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY as build env vars.
+Pick one (don't widen scope by doing all three): (a) deploy apps/web to Cloudflare
+Pages (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY as build env vars); (b) build the
+Invoices slice; (c) replace migration 004's anon-write demo sandbox with real
+Supabase Auth (see 004's header comment) before any real tenant data exists.
 
 ## After that
 Port UX patterns from the old Apps Script Command Station (reference only — port
