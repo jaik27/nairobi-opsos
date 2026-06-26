@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Sidebar, type NavId } from './components/Sidebar'
 import { MissionControl } from './screens/MissionControl'
+import { Stores } from './screens/Stores'
 import { ComingSoon } from './screens/ComingSoon'
 
 function App() {
@@ -12,7 +13,7 @@ function App() {
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         {active === 'mission-control' && <MissionControl />}
         {active === 'procurement' && <ComingSoon title="Procurement" />}
-        {active === 'stores' && <ComingSoon title="Stores" />}
+        {active === 'stores' && <Stores />}
         {active === 'invoices' && <ComingSoon title="Invoices" />}
       </main>
     </div>
