@@ -5,6 +5,14 @@ Read this first, every session. Then read `/docs` for full context
 For the lived history — decisions, working style, the Command Station vs Control
 Tower distinction, and the Drive artifact map — read docs/CONTEXT_PACK.md.
 
+Command (founder/BD) layer is planned but NOT started. Its porting spec is
+docs/command-station-v0.5.1-analysis.md and a DRAFT schema is
+supabase/migrations/003_command_core.sql — both are REFERENCE ONLY, do not
+build/run until the Control Tower vertical (Stores → Procurement) is done.
+Product direction is to UNIFY Command + Control Tower as two scopes of one
+platform — that's future sequencing, not the active task; see
+docs/CONTEXT_PACK.md for the full decision.
+
 ## What this is
 Nairobi OpsOS — a consulting-led digital operations & AI automation platform for
 Kenyan SMEs. First module: the **Procurement & Stores Control Tower** for the
