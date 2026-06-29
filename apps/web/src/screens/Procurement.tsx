@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { PurchaseRequestForm } from '../components/PurchaseRequestForm'
 import { PurchaseRequestTable } from '../components/PurchaseRequestTable'
+import { useSession } from '../hooks/useSession'
+import { getDemoOrgId } from '../lib/demoOrg'
+import { getOwnOrgId } from '../lib/userOrg'
 import {
   createPurchaseRequest,
   fetchPurchaseRequests,
@@ -12,6 +15,8 @@ import { fetchStockItems, type StockItem } from '../data/stockItems'
 type LoadState = 'loading' | 'ready' | 'error'
 
 export function Procurement() {
+  const { session } = useSession()
+
   const [items, setItems] = useState<PurchaseRequest[]>([])
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -57,7 +62,11 @@ export function Procurement() {
     setSubmitting(true)
     setSubmitError(null)
     try {
-      await createPurchaseRequest(input)
+      // The one place the anon-demo lane and the real-auth lane touch: write
+      // into the signed-in user's own org if there's a session, otherwise
+      // fall back to the fixed demo org (the only thing anon can write to).
+      const orgId = session ? await getOwnOrgId(session.user.id) : await getDemoOrgId()
+      await createPurchaseRequest(input, orgId)
       setFormOpen(false)
       await loadPurchaseRequests()
     } catch (error) {
@@ -72,7 +81,9 @@ export function Procurement() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-ink">Procurement</h1>
-          <p className="mt-1 text-sm text-ink-dim">Purchase requests — live demo org</p>
+          <p className="mt-1 text-sm text-ink-dim">
+            Purchase requests — {session ? 'your org' : 'live demo org'}
+          </p>
         </div>
         <button
           type="button"

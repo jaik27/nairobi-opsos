@@ -1,4 +1,3 @@
-import { getDemoOrgId } from '../lib/demoOrg'
 import { supabase } from '../lib/supabaseClient'
 
 export type PurchaseRequestStatus =
@@ -78,8 +77,14 @@ function generatePrNumber(): string {
   return `PR-${Date.now()}`
 }
 
-export async function createPurchaseRequest(input: NewPurchaseRequestInput): Promise<string> {
-  const orgId = await getDemoOrgId()
+// orgId is supplied by the caller, not resolved in here — see Procurement.tsx's
+// handleCreate, which is the one place the anon-demo lane and the real-auth
+// lane touch: it picks the demo org id or the signed-in user's own org id
+// before calling this.
+export async function createPurchaseRequest(
+  input: NewPurchaseRequestInput,
+  orgId: string,
+): Promise<string> {
   const prNumber = generatePrNumber()
 
   const { data: pr, error: prError } = await supabase
