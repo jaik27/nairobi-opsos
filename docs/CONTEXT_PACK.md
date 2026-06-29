@@ -100,6 +100,12 @@ Decisions worth remembering *why*:
   data), pushed to `main`.
 - Stood up Supabase, ran both migrations (demo org = 4 SKUs), wired Mission Control to
   **live** data (stock_items + v_stock_on_hand). Live, committed, pushed.
+- Shipped the auth vertical: real Supabase Auth (magic link) live alongside the anon
+  demo path — two lanes, by design, that never cross (decision: keep the anon demo
+  lane public AND add authenticated org-scoped access side by side, not replace one
+  with the other). Migration 005 aligned profiles.role to owner/procurement/finance/
+  viewer. Provisioning is manual — Jay as the one real owner, no signup-creates-org
+  trigger yet (deferred until a second real tenant exists).
 
 ## 7. Next steps (the through-line)
 1. Build one more screen end-to-end with live data: **Stores → Stock on Hand** (reads

@@ -83,7 +83,7 @@ The gap here is overwhelmingly **screens + workflow**, sequenced after auth + ap
 - **Empty states** exist as text but don't guide the next action.
 
 ## 4. Recommended next-vertical order (highest leverage first)
-1. **Real Supabase Auth** (login, session, profiles→org, role: owner/procurement/finance/
+1. **Real Supabase Auth** ✅ (login, session, profiles→org, role: owner/procurement/finance/
    viewer per IA §9). Keystone — replaces 004's anon-write fence, unlocks everything below.
 2. **PR approval workflow** (submit/approve/reject-with-comment + PR detail view + status
    tabs). The first true workflow; small once auth exists; immediately demoable.

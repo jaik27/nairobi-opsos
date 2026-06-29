@@ -51,31 +51,26 @@ font Inter; rounded 22px panels; mobile-first. (Full system in the RFC/IA.)
 - **Scope discipline:** ship one vertical end-to-end before widening. Don't gold-plate.
 
 ## Current state (updated 2026-06-29)
-Real Supabase Auth is live, additive alongside the anon demo path (neither 002's
-nor 004's anon policies were touched). Migration 005_align_roles.sql aligned
-profiles.role to the IA §9 roles (owner/procurement/finance/viewer, default
-'viewer') — profiles had zero rows, so this was a clean rename, not a data
-migration. Front end: src/hooks/useSession.ts tracks the session; src/lib/auth.ts
-(signInWithMagicLink/signOut); src/screens/SignIn.tsx is a minimal magic-link
-form; src/components/AuthStatus.tsx is the sign-in/out control shown above every
-screen's content. Mission Control and Stores needed zero changes — RLS already
-scopes reads correctly per role. The one deliberate branch is in
-Procurement.tsx's handleCreate: org_id comes from src/lib/userOrg.ts's
-getOwnOrgId(session.user.id) when signed in, else demoOrg.ts's getDemoOrgId() —
-createPurchaseRequest no longer resolves org_id itself, it's an explicit param.
-Verified live: anon lane fully regression-checked (Mission Control, Stores,
-Procurement's demo data all unchanged, zero console errors); the authenticated
-lane's plumbing is verified by code/RLS review but needs a human to actually
-click a magic link from their inbox to confirm end-to-end — provisioning is
-manual (one orgs row + one profiles row per real user via SQL Editor), no
-signup-creates-org trigger yet (deliberately deferred — one real user today).
+Real Supabase Auth (magic link) is live and committed, additive alongside the
+anon demo path — 002/004's anon policies untouched. Migration 005_align_roles.sql
+aligned profiles.role to the IA §9 roles (owner/procurement/finance/viewer,
+default 'viewer'). Both lanes proven live: anon demo (Mission Control, Stores,
+Procurement all unchanged, zero console errors) and authenticated org-scoped
+access (sign-in → provisioned profile → own-org data, isolated from the demo
+org). See src/hooks/useSession.ts, src/lib/auth.ts, src/screens/SignIn.tsx,
+src/components/AuthStatus.tsx, and the explicit org_id branch in
+Procurement.tsx's handleCreate (src/lib/userOrg.ts vs src/lib/demoOrg.ts).
+Provisioning is manual (one orgs + one profiles row via SQL Editor); no
+signup-creates-org trigger yet — one real user today.
+**Open follow-up:** add the production redirect URL in Supabase (Auth → URL
+Configuration → add https://nairobi-opsos.pages.dev) before live login works
+post-deploy.
 
 ## Next step
-Per docs/control-tower-gap-analysis.md §4's recommended order, now that identity
-exists: build the PR approval workflow (submit → approve/reject-with-comment,
-using the existing draft/submitted/approved/rejected/rfq_sent/closed states —
-the states exist, the transitions don't) + a PR detail view + status tabs. Don't
-jump ahead to Stock movements or the Quotations/PO/Invoice chain before this.
+PR approval workflow (submit → approve/reject-with-comment), now that real
+roles/identities exist — per docs/control-tower-gap-analysis.md §4. Uses the
+existing draft/submitted/approved/rejected/rfq_sent/closed states; the states
+exist, the transitions don't. Add a PR detail view + status tabs alongside it.
 
 ## After that
 Stock movements (receive/issue/adjust + item history) to make Stores a real
