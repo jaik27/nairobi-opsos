@@ -50,21 +50,34 @@ font Inter; rounded 22px panels; mobile-first. (Full system in the RFC/IA.)
 - **TypeScript strict; functional components; named exports; keep components small.**
 - **Scope discipline:** ship one vertical end-to-end before widening. Don't gold-plate.
 
-## Current state (updated 2026-06-29)
+## Current state (updated 2026-06-30)
+**Deployed and live at https://nairobi-opsos.pages.dev** (Cloudflare Pages,
+git-connected to `main`). Migrations 001–005 are applied to the production
+Supabase project. The Supabase Auth redirect URL is configured for the
+production domain, so the magic-link round trip works post-deploy, not just
+on localhost.
+
 Real Supabase Auth (magic link) is live and committed, additive alongside the
 anon demo path — 002/004's anon policies untouched. Migration 005_align_roles.sql
 aligned profiles.role to the IA §9 roles (owner/procurement/finance/viewer,
-default 'viewer'). Both lanes proven live: anon demo (Mission Control, Stores,
-Procurement all unchanged, zero console errors) and authenticated org-scoped
-access (sign-in → provisioned profile → own-org data, isolated from the demo
-org). See src/hooks/useSession.ts, src/lib/auth.ts, src/screens/SignIn.tsx,
-src/components/AuthStatus.tsx, and the explicit org_id branch in
-Procurement.tsx's handleCreate (src/lib/userOrg.ts vs src/lib/demoOrg.ts).
-Provisioning is manual (one orgs + one profiles row via SQL Editor); no
-signup-creates-org trigger yet — one real user today.
-**Open follow-up:** add the production redirect URL in Supabase (Auth → URL
-Configuration → add https://nairobi-opsos.pages.dev) before live login works
-post-deploy.
+default 'viewer'). Both lanes are verified live end-to-end, including the
+authenticated round trip itself: anon demo (Mission Control, Stores,
+Procurement all unchanged, zero console errors) and a real sign-in → a
+provisioned profile/org → a Purchase Request created and confirmed under the
+real org id, isolated from the demo org in both directions (checked from an
+incognito session). See src/hooks/useSession.ts, src/lib/auth.ts,
+src/screens/SignIn.tsx, src/components/AuthStatus.tsx, and the explicit
+org_id branch in Procurement.tsx's handleCreate (src/lib/userOrg.ts vs
+src/lib/demoOrg.ts). Provisioning is still manual (one orgs + one profiles
+row via SQL Editor); no signup-creates-org trigger yet — one real user today.
+
+**Record-keeping note:** this operational state (deployment, the live auth
+round trip, applied migrations, dashboard config) lives in Cloudflare,
+Supabase, and the browser — it leaves no artifact in the repo itself, so a
+repo-only read (e.g. `docs/PROJECT_AUDIT.md`) is structurally blind to it.
+See `docs/STATE_OF_THE_VENTURE.md` for the fuller venture-level picture,
+including the gap between this product foundation and the unstarted go-to-
+market track.
 
 ## Next step
 PR approval workflow (submit → approve/reject-with-comment), now that real
