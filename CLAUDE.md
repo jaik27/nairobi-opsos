@@ -50,45 +50,55 @@ font Inter; rounded 22px panels; mobile-first. (Full system in the RFC/IA.)
 - **TypeScript strict; functional components; named exports; keep components small.**
 - **Scope discipline:** ship one vertical end-to-end before widening. Don't gold-plate.
 
-## Current state (updated 2026-06-30)
+## Current state (updated 2026-07-01)
 **Deployed and live at https://nairobi-opsos.pages.dev** (Cloudflare Pages,
-git-connected to `main`). Migrations 001–005 are applied to the production
-Supabase project. The Supabase Auth redirect URL is configured for the
-production domain, so the magic-link round trip works post-deploy, not just
-on localhost.
+git-connected to `main`). Migrations 001–006 are applied to the production
+Supabase project. The Supabase Auth redirect URL is configured for production.
 
-Real Supabase Auth (magic link) is live and committed, additive alongside the
-anon demo path — 002/004's anon policies untouched. Migration 005_align_roles.sql
-aligned profiles.role to the IA §9 roles (owner/procurement/finance/viewer,
-default 'viewer'). Both lanes are verified live end-to-end, including the
-authenticated round trip itself: anon demo (Mission Control, Stores,
-Procurement all unchanged, zero console errors) and a real sign-in → a
-provisioned profile/org → a Purchase Request created and confirmed under the
-real org id, isolated from the demo org in both directions (checked from an
-incognito session). See src/hooks/useSession.ts, src/lib/auth.ts,
-src/screens/SignIn.tsx, src/components/AuthStatus.tsx, and the explicit
-org_id branch in Procurement.tsx's handleCreate (src/lib/userOrg.ts vs
-src/lib/demoOrg.ts). Provisioning is still manual (one orgs + one profiles
-row via SQL Editor); no signup-creates-org trigger yet — one real user today.
+PR approval workflow is live: submit → approve/reject-with-comment, with a full
+audit trail in `purchase_request_status_history` and role-gated RLS on
+`purchase_requests` (migration 006). Front end: `PurchaseRequestDetail`
+(lines + history + action buttons), row-click from `PurchaseRequestTable`,
+status tabs (All / Draft / Submitted / Approved / Rejected), and
+`lib/userRole.ts`. Approve/Reject require `owner` or `procurement` role,
+enforced server-side by the `pr_approve_reject` RLS policy — not just by
+hiding the button.
 
-**Record-keeping note:** this operational state (deployment, the live auth
-round trip, applied migrations, dashboard config) lives in Cloudflare,
-Supabase, and the browser — it leaves no artifact in the repo itself, so a
-repo-only read (e.g. `docs/PROJECT_AUDIT.md`) is structurally blind to it.
-See `docs/STATE_OF_THE_VENTURE.md` for the fuller venture-level picture,
-including the gap between this product foundation and the unstarted go-to-
-market track.
+Both auth lanes remain live: anon demo (Mission Control, Stores, Procurement
+reads + PR create into demo org) and authenticated org-scoped access (sign-in
+→ provisioned profile → own-org data). Provisioning is still manual.
+
+**Record-keeping note:** deployment, applied migrations, and dashboard config
+leave no artifact in the repo — see `docs/STATE_OF_THE_VENTURE.md`.
 
 ## Next step
-PR approval workflow (submit → approve/reject-with-comment), now that real
-roles/identities exist — per docs/control-tower-gap-analysis.md §4. Uses the
-existing draft/submitted/approved/rejected/rfq_sent/closed states; the states
-exist, the transitions don't. Add a PR detail view + status tabs alongside it.
+Stock movements (receive / issue / adjust + per-item history) to make Stores a
+real inventory tool — per docs/control-tower-gap-analysis.md §4 item 3. The
+schema is already built (`stock_movements` append-only ledger, `v_stock_on_hand`
+view); what's missing is the write path and a movement-history screen.
 
 ## After that
-Stock movements (receive/issue/adjust + item history) to make Stores a real
-inventory tool. Then the Stores→PR "reorder now" bridge + Mission Control
-click-through tiles. Then continue the chain: Quotations → PO → GRN → Invoice →
-payment/3-way match. Port Command Station UX (reference only — port FROM, don't
-paste IN) opportunistically, not as a blocking step. Then an n8n nightly
-reorder-alert digest (see SETUP_RUNBOOK.md §5).
+Stores→PR "reorder now" bridge + Mission Control click-through tiles. Then
+continue the chain: Quotations → PO → GRN → Invoice → payment/3-way match.
+Port Command Station UX opportunistically (reference only — port FROM, don't
+paste IN). Then n8n nightly reorder-alert digest (see SETUP_RUNBOOK.md §5).
+
+## Known technical debt (agent: note these)
+- **RLS transition-pair loophole (006):** The two split UPDATE policies on
+  `purchase_requests` (`pr_submit` + `pr_approve_reject`) can be combined by
+  Postgres's OR-of-policies semantics so an `owner`/`procurement` user can skip
+  `draft → submitted` and go directly `draft → approved`. This does NOT let an
+  unauthorised role approve — only the privileged roles are affected, and the
+  actual security boundary holds. The correct fix is a `BEFORE UPDATE` trigger
+  (which sees OLD and NEW unambiguously), replacing the two policies with one
+  coarse org-isolation UPDATE policy + a trigger for state-machine enforcement.
+  Accepted at single-user scale; fix before multi-user rollout.
+- **Two-step writes (no DB transaction):** Both `createPurchaseRequest` and
+  `updatePurchaseRequestStatus` do two sequential HTTP requests with no shared
+  transaction. Partial failure leaves orphaned rows. Fix: wrap in an RPC
+  function for true atomicity.
+- **No `supabase gen types`:** All Supabase row types are hand-written `as`
+  casts. Schema drift is silent at build time. Fix: add `supabase gen types` to
+  a CI step once CI exists.
+- **No CI pipeline:** No `.github/` directory exists. All tests are manual.
+- Full debt inventory in `docs/PROJECT_AUDIT.md` §8.

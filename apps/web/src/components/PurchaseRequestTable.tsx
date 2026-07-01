@@ -3,6 +3,7 @@ import type { PurchaseRequest } from '../data/purchaseRequests'
 type PurchaseRequestTableProps = {
   items: PurchaseRequest[]
   loading: boolean
+  onRowClick: (id: string) => void
 }
 
 function statusClass(status: PurchaseRequest['status']): string {
@@ -10,7 +11,6 @@ function statusClass(status: PurchaseRequest['status']): string {
     case 'approved':
       return 'text-lime'
     case 'rejected':
-      return 'text-cyan'
     case 'submitted':
     case 'rfq_sent':
       return 'text-cyan'
@@ -27,7 +27,7 @@ function formatDate(iso: string): string {
   })
 }
 
-export function PurchaseRequestTable({ items, loading }: PurchaseRequestTableProps) {
+export function PurchaseRequestTable({ items, loading, onRowClick }: PurchaseRequestTableProps) {
   return (
     <div className="rounded-panel border border-border bg-panel p-5">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-dim">
@@ -53,7 +53,11 @@ export function PurchaseRequestTable({ items, loading }: PurchaseRequestTablePro
             </thead>
             <tbody>
               {items.map((pr) => (
-                <tr key={pr.id} className="border-b border-border last:border-0">
+                <tr
+                  key={pr.id}
+                  onClick={() => onRowClick(pr.id)}
+                  className="cursor-pointer border-b border-border last:border-0 hover:bg-panel-raised"
+                >
                   <td className="py-3 pr-4 font-medium text-ink">{pr.prNumber}</td>
                   <td className="py-3 pr-4 text-ink-dim">{pr.requestedBy}</td>
                   <td className="py-3 pr-4 text-ink-dim">{formatDate(pr.createdAt)}</td>

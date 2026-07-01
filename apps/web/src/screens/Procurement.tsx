@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { Session } from '@supabase/supabase-js'
+import { PurchaseRequestDetail } from '../components/PurchaseRequestDetail'
 import { PurchaseRequestForm } from '../components/PurchaseRequestForm'
 import { PurchaseRequestTable } from '../components/PurchaseRequestTable'
 import { useSession } from '../hooks/useSession'
 import { getDemoOrgId } from '../lib/demoOrg'
 import { getOwnOrgId } from '../lib/userOrg'
+import { getUserRole } from '../lib/userRole'
 import {
   createPurchaseRequest,
   fetchPurchaseRequests,
@@ -13,9 +16,16 @@ import {
 import { fetchStockItems, type StockItem } from '../data/stockItems'
 
 type LoadState = 'loading' | 'ready' | 'error'
+type Tab = 'all' | 'draft' | 'submitted' | 'approved' | 'rejected'
+
+const TABS: Tab[] = ['all', 'draft', 'submitted', 'approved', 'rejected']
+
+function tabLabel(tab: Tab): string {
+  return tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)
+}
 
 export function Procurement() {
-  const { session } = useSession()
+  const { session } = useSession() as { session: Session | null; loading: boolean }
 
   const [items, setItems] = useState<PurchaseRequest[]>([])
   const [loadState, setLoadState] = useState<LoadState>('loading')
@@ -26,6 +36,19 @@ export function Procurement() {
   const [formOpen, setFormOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const [selectedPRId, setSelectedPRId] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<Tab>('all')
+
+  // Fetch the signed-in user's role whenever the session changes.
+  useEffect(() => {
+    if (session) {
+      getUserRole(session.user.id).then(setUserRole).catch(() => setUserRole(null))
+    } else {
+      setUserRole(null)
+    }
+  }, [session])
 
   async function loadPurchaseRequests() {
     setLoadState('loading')
@@ -76,8 +99,30 @@ export function Procurement() {
     }
   }
 
+  function handleRowClick(id: string) {
+    setFormOpen(false)
+    setSelectedPRId(id)
+  }
+
+  const tabCounts = useMemo(
+    () => ({
+      all: items.length,
+      draft: items.filter((i) => i.status === 'draft').length,
+      submitted: items.filter((i) => i.status === 'submitted').length,
+      approved: items.filter((i) => i.status === 'approved').length,
+      rejected: items.filter((i) => i.status === 'rejected').length,
+    }),
+    [items],
+  )
+
+  const filteredItems = useMemo(
+    () => (activeTab === 'all' ? items : items.filter((i) => i.status === activeTab)),
+    [items, activeTab],
+  )
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-ink">Procurement</h1>
@@ -85,32 +130,71 @@ export function Procurement() {
             Purchase requests — {session ? 'your org' : 'live demo org'}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setFormOpen((open) => !open)}
-          className="rounded-2xl bg-lime px-4 py-2 text-sm font-semibold text-canvas"
-        >
-          {formOpen ? 'Close' : '+ New purchase request'}
-        </button>
+        {!selectedPRId && (
+          <button
+            type="button"
+            onClick={() => setFormOpen((open) => !open)}
+            className="rounded-2xl bg-lime px-4 py-2 text-sm font-semibold text-canvas"
+          >
+            {formOpen ? 'Close' : '+ New purchase request'}
+          </button>
+        )}
       </div>
 
-      {loadState === 'error' && (
+      {loadState === 'error' && !selectedPRId && (
         <div className="rounded-panel border border-cyan/40 bg-panel p-4 text-sm text-cyan">
           Couldn't reach Supabase: {errorMessage}
         </div>
       )}
 
-      {formOpen && (
-        <PurchaseRequestForm
-          stockItems={stockItems}
-          submitting={submitting}
-          errorMessage={submitError}
-          onSubmit={handleCreate}
-          onCancel={() => setFormOpen(false)}
+      {/* Detail view */}
+      {selectedPRId ? (
+        <PurchaseRequestDetail
+          prId={selectedPRId}
+          session={session}
+          userRole={userRole}
+          onClose={() => setSelectedPRId(null)}
+          onStatusUpdated={() => {
+            void loadPurchaseRequests()
+          }}
         />
-      )}
+      ) : (
+        <>
+          {formOpen && (
+            <PurchaseRequestForm
+              stockItems={stockItems}
+              submitting={submitting}
+              errorMessage={submitError}
+              onSubmit={handleCreate}
+              onCancel={() => setFormOpen(false)}
+            />
+          )}
 
-      <PurchaseRequestTable items={items} loading={loadState === 'loading'} />
+          {/* Status tabs */}
+          <div className="flex flex-wrap gap-1 border-b border-border pb-1">
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium uppercase tracking-wide transition-colors ${
+                  activeTab === tab
+                    ? 'bg-panel text-lime'
+                    : 'text-ink-dim hover:text-ink'
+                }`}
+              >
+                {tabLabel(tab)} ({tabCounts[tab]})
+              </button>
+            ))}
+          </div>
+
+          <PurchaseRequestTable
+            items={filteredItems}
+            loading={loadState === 'loading'}
+            onRowClick={handleRowClick}
+          />
+        </>
+      )}
     </div>
   )
 }
