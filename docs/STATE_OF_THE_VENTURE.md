@@ -6,7 +6,7 @@
 > truth), and the Command Centre Tracker v1 (real business metrics). It exists so any
 > future session starts from truth, not a partial or repo-blind picture.
 >
-> **Date of read:** 2026-06-29. **Read by:** strategic synthesis pass over the committed
+> **Date of read:** 2026-07-01. **Read by:** strategic synthesis pass over the committed
 > audit + Drive strategy docs + this session's verified operational evidence.
 
 ---
@@ -37,8 +37,9 @@ config) lives in Cloudflare, Supabase, and the browser. `CLAUDE.md` must record 
 operational state explicitly, or every fresh session re-inherits the blind spot.
 
 **Operational truth as of this writing:** deployed live at `nairobi-opsos.pages.dev`;
-auth round-trip verified end-to-end; migrations 001–005 applied; Supabase redirect URL
-configured for production. None of that is providable from the repo alone.
+auth round-trip verified end-to-end; migrations 001–006 applied; Supabase redirect URL
+configured for production; PR approval workflow verified (happy path + security path).
+None of that is providable from the repo alone.
 
 ---
 
@@ -75,7 +76,7 @@ substituting for the business.
 
 | # | Module (from Master Context Pack) | Status | What exists in code |
 |---|---|---|---|
-| 1 | Procurement & Stores Control Tower | **~20–25% built** | Stores (read), Mission Control (read), Purchase Requests (create + list). Auth + multi-tenant isolation live. |
+| 1 | Procurement & Stores Control Tower | **~30% built** | Stores (read), Mission Control (read), Purchase Requests (create + list + submit/approve/reject workflow + append-only audit trail). Auth + multi-tenant isolation live. Role-gated actions enforced at the RLS layer. |
 | 2 | Owner Daily Dashboard | **Not built** | Mission Control is a procurement overview, not the owner-daily-visibility module described in the vision. |
 | 3 | WhatsApp CRM & Follow-Up Engine | **Not built** | Zero code. |
 | 4 | Tender / Proposal / Compliance Assistant | **Not built** | Zero code. |
@@ -94,12 +95,20 @@ three slices of it.
 
 ## 3. What's real, what's verified, what's assumed (from the audit, corrected)
 
-**Real and verified this session (outside-the-repo evidence):** deployment; the
-authenticated lane end-to-end; org isolation in both directions; migration 005 applied.
+**Real and verified (outside-the-repo evidence):** deployment; authenticated lane
+end-to-end; org isolation in both directions; migrations 001–006 applied.
 
-**Real and verified by tooling (in the audit):** Mission Control / Stores / Procurement
+**Real and verified by tooling (in-session):** Mission Control / Stores / Procurement
 demo reads; the anon PR-create write path with org_id cross-checked; form validation
 blocking bad submits; post-auth regression of the demo lane.
+
+**Real and verified — approval workflow (strongest end-to-end test to date):**
+- Happy path: submit → approve and submit → reject-with-comment both committed rows
+  to `purchase_request_status_history` and the detail view reflected them immediately.
+- Security path: with `profiles.role = 'viewer'`, a direct REST API `PATCH` against
+  `purchase_requests` using the viewer's own JWT returned `[]` — 0 rows affected,
+  database status unchanged. The RLS policy (`pr_approve_reject`) blocked the write
+  server-side, not the hidden button.
 
 **Genuinely absent (the audit is right):** no tests anywhere (no runner installed);
 no CI (no `.github`, contradicts the Charter); `tsconfig` never sets `"strict": true`

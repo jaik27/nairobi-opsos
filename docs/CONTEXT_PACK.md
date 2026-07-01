@@ -106,16 +106,36 @@ Decisions worth remembering *why*:
   with the other). Migration 005 aligned profiles.role to owner/procurement/finance/
   viewer. Provisioning is manual — Jay as the one real owner, no signup-creates-org
   trigger yet (deferred until a second real tenant exists).
+- Shipped the PR approval workflow: submit → approve/reject-with-comment, verified
+  end-to-end including the security path (viewer blocked at the REST API, not just the
+  UI). Key decisions: (a) role gate lives in a Postgres RLS policy (`pr_approve_reject`
+  requires `current_user_role() in ('owner','procurement')`) so it can't be bypassed
+  client-side; (b) chose a `purchase_request_status_history` table over flat
+  `approved_by`/`approved_at` columns specifically to preserve the full
+  reject→resubmit→approve chain, not just the latest decision; (c) known RLS
+  limitation — Postgres OR-of-policies semantics mean an owner/procurement user can
+  jump `draft → approved` directly, bypassing `submitted`; the security boundary
+  (viewer can't approve) still holds, but strict transition enforcement requires a
+  `BEFORE UPDATE` trigger — deferred, accepted at single-user scale. Bugfix in same
+  session: free-text PR lines (no stock item) caused a null-pointer in the detail fetch
+  (`l.stock_items[0]` when `stock_items` is null); fixed by widening the type and
+  using optional chaining (`l.stock_items?.[0]`) in `fetchPurchaseRequestDetail`
+  (commit 057bcda).
 
 ## 7. Next steps (the through-line)
-1. Build one more screen end-to-end with live data: **Stores → Stock on Hand** (reads
-   tables already proven; isolates the screen-building pattern from write-paths).
-2. Deploy `apps/web` to **Cloudflare Pages** (root dir `apps/web`, build `npm run build`,
-   output `dist`, env vars `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`).
-3. Then **Procurement → Purchase Requests** (first write-path).
-4. Then **port Command Station UX** screen-by-screen (reference only) — decide the
-   Command Station's place (second module vs private layer) before merging anything.
-5. Later: n8n nightly reorder-alert digest; Gemini command bar; the ingestion adapters.
+The first four items below are done. Pick from item 5 at the start of the next session.
+
+1. ✅ Stores → Stock on Hand (read-only, live data, search + sort).
+2. ✅ Deploy to Cloudflare Pages (live at nairobi-opsos.pages.dev).
+3. ✅ Procurement → Purchase Requests (create + list, both auth lanes).
+4. ✅ PR approval workflow (submit/approve/reject, RLS role gate, audit trail).
+5. **Stock movements** (receive/issue/adjust write path + per-item history) — or
+   **production-auth polish** (seed realistic data for the real org). Pick next session.
+6. Then: Stores→PR "reorder now" bridge; Mission Control click-through tiles.
+7. Then: Quotations → PO → GRN → Invoice → payment/3-way match.
+8. Then: port Command Station UX (reference only — decide second module vs private
+   layer before merging anything).
+9. Later: n8n nightly reorder-alert digest; Gemini command bar; ingestion adapters.
 
 ## 8. Drive artifact map (source-of-truth docs outside the repo)
 - Project HQ folder; **Master Context Pack v1**; **Responsive Dynamic UI Spec v1**;

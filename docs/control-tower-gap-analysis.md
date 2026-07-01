@@ -27,14 +27,13 @@ by nearly every source as the core of where procurement automation pays for itse
 
 ### Procurement → Purchase Requests (newest screen)
 **Table stakes missing (build, in order):**
-1. **Approval workflow** — THE biggest gap. The loop is submit → route to approver →
-   approve / reject-with-comment → becomes orderable. Today PRs sit in `draft` forever.
-   The schema ALREADY has the states (`draft/submitted/approved/rejected/rfq_sent/
-   closed`) — the *states* exist, the *actions/transitions* don't. Needs auth first
-   (an approver must be a real identity).
-2. **PR detail view** — open a PR to see its lines, status history, who created it.
-   IA §5 specifies it; currently you can list but not open.
-3. **Status filter / tabs** — default to "what's pending my action." Every tool does this.
+1. ✅ **Approval workflow** — submit → approve/reject-with-comment, role-gated at the
+   RLS layer (`pr_approve_reject` policy), append-only `purchase_request_status_history`
+   audit trail. Verified: happy path end-to-end + viewer blocked at REST API.
+2. ✅ **PR detail view** — lines, metadata, action buttons, status history timeline.
+   Row-click from the list opens `PurchaseRequestDetail`.
+3. ✅ **Status filter / tabs** — All / Draft / Submitted / Approved / Rejected tabs with
+   live counts, client-side filter via useMemo.
 4. **Edit / cancel a draft** before submission.
 5. **Document attachment** — a quote PDF, a photo of the broken part. Universal; genuinely
    useful for SMEs.
@@ -83,10 +82,10 @@ The gap here is overwhelmingly **screens + workflow**, sequenced after auth + ap
 - **Empty states** exist as text but don't guide the next action.
 
 ## 4. Recommended next-vertical order (highest leverage first)
-1. **Real Supabase Auth** ✅ (login, session, profiles→org, role: owner/procurement/finance/
+1. ✅ **Real Supabase Auth** (login, session, profiles→org, role: owner/procurement/finance/
    viewer per IA §9). Keystone — replaces 004's anon-write fence, unlocks everything below.
-2. **PR approval workflow** (submit/approve/reject-with-comment + PR detail view + status
-   tabs). The first true workflow; small once auth exists; immediately demoable.
+2. ✅ **PR approval workflow** (submit/approve/reject-with-comment + PR detail view + status
+   tabs + RLS role gate + append-only audit trail). Verified end-to-end.
 3. **Stock movements** (receive/issue/adjust + item history). Makes Stores a real inventory
    tool and feeds Mission Control's numbers from real events.
 4. **Stores→PR "reorder now" bridge** + Mission Control click-through + pending-approvals

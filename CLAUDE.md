@@ -52,30 +52,33 @@ font Inter; rounded 22px panels; mobile-first. (Full system in the RFC/IA.)
 
 ## Current state (updated 2026-07-01)
 **Deployed and live at https://nairobi-opsos.pages.dev** (Cloudflare Pages,
-git-connected to `main`). Migrations 001–006 are applied to the production
-Supabase project. The Supabase Auth redirect URL is configured for production.
+git-connected to `main`). Migrations 001–006 applied to the production Supabase
+project. Auth redirect URL configured for production.
 
-PR approval workflow is live: submit → approve/reject-with-comment, with a full
-audit trail in `purchase_request_status_history` and role-gated RLS on
-`purchase_requests` (migration 006). Front end: `PurchaseRequestDetail`
-(lines + history + action buttons), row-click from `PurchaseRequestTable`,
-status tabs (All / Draft / Submitted / Approved / Rejected), and
-`lib/userRole.ts`. Approve/Reject require `owner` or `procurement` role,
-enforced server-side by the `pr_approve_reject` RLS policy — not just by
-hiding the button.
+PR approval workflow is live and verified end-to-end:
+- **Happy path:** submit → approve/reject-with-comment; each transition writes
+  an append-only row to `purchase_request_status_history`; detail view shows
+  lines, metadata, action buttons, and the full history timeline.
+- **Security path:** viewer role blocked at the REST API — a direct
+  `PATCH /purchase_requests?id=eq.<id>` with a viewer JWT returns `[]`
+  (0 rows affected); the database status is unchanged.
+- Role gate lives in the `pr_approve_reject` RLS policy (`pr_approve_reject`
+  requires `current_user_role() in ('owner','procurement')`), not just the UI.
 
 Both auth lanes remain live: anon demo (Mission Control, Stores, Procurement
-reads + PR create into demo org) and authenticated org-scoped access (sign-in
-→ provisioned profile → own-org data). Provisioning is still manual.
+reads + PR create into demo org) and authenticated org-scoped access. Provisioning
+is still manual.
 
-**Record-keeping note:** deployment, applied migrations, and dashboard config
-leave no artifact in the repo — see `docs/STATE_OF_THE_VENTURE.md`.
+**Record-keeping note:** deployment and applied-migration state leave no repo
+artifact — see `docs/STATE_OF_THE_VENTURE.md`.
 
 ## Next step
-Stock movements (receive / issue / adjust + per-item history) to make Stores a
-real inventory tool — per docs/control-tower-gap-analysis.md §4 item 3. The
-schema is already built (`stock_movements` append-only ledger, `v_stock_on_hand`
-view); what's missing is the write path and a movement-history screen.
+**Pick at the start of the next session:**
+- **Stock movements** (receive / issue / adjust + per-item history) — makes
+  Stores a real inventory tool. Schema already built (`stock_movements` ledger,
+  `v_stock_on_hand`); missing the write path and history screen.
+- **Production-auth polish** — seed realistic suppliers/stock-items for the real
+  org so demos use the owner's own data, not just the anon plastics demo.
 
 ## After that
 Stores→PR "reorder now" bridge + Mission Control click-through tiles. Then
@@ -84,21 +87,25 @@ Port Command Station UX opportunistically (reference only — port FROM, don't
 paste IN). Then n8n nightly reorder-alert digest (see SETUP_RUNBOOK.md §5).
 
 ## Known technical debt (agent: note these)
-- **RLS transition-pair loophole (006):** The two split UPDATE policies on
+- **BEFORE UPDATE trigger (006 — deferred):** The two split UPDATE policies on
   `purchase_requests` (`pr_submit` + `pr_approve_reject`) can be combined by
-  Postgres's OR-of-policies semantics so an `owner`/`procurement` user can skip
-  `draft → submitted` and go directly `draft → approved`. This does NOT let an
-  unauthorised role approve — only the privileged roles are affected, and the
-  actual security boundary holds. The correct fix is a `BEFORE UPDATE` trigger
-  (which sees OLD and NEW unambiguously), replacing the two policies with one
-  coarse org-isolation UPDATE policy + a trigger for state-machine enforcement.
-  Accepted at single-user scale; fix before multi-user rollout.
+  Postgres's OR-of-policies semantics so an `owner`/`procurement` user can jump
+  directly `draft → approved`, bypassing `submitted`. The security boundary
+  (viewer can't approve) still holds — only privileged roles are affected. The
+  correct fix is a `BEFORE UPDATE` trigger (sees OLD and NEW unambiguously),
+  replacing the two policies with one coarse org-isolation UPDATE policy + a
+  trigger for transition enforcement. Accepted at single-user scale; fix before
+  multi-user rollout.
+- **Real org needs realistic seed data:** The authenticated lane currently writes
+  to an empty org (no suppliers, no stock items, no movements). The approval
+  workflow and all future screens will be meaningless in a demo until the real
+  org has a realistic set of seeded records — suppliers, stock items, initial
+  movements. Do this before any client demo.
 - **Two-step writes (no DB transaction):** Both `createPurchaseRequest` and
   `updatePurchaseRequestStatus` do two sequential HTTP requests with no shared
-  transaction. Partial failure leaves orphaned rows. Fix: wrap in an RPC
-  function for true atomicity.
+  transaction. Partial failure leaves orphaned rows. Fix: wrap in a DB-side RPC
+  for true atomicity.
 - **No `supabase gen types`:** All Supabase row types are hand-written `as`
-  casts. Schema drift is silent at build time. Fix: add `supabase gen types` to
-  a CI step once CI exists.
+  casts. Schema drift is silent at build time.
 - **No CI pipeline:** No `.github/` directory exists. All tests are manual.
 - Full debt inventory in `docs/PROJECT_AUDIT.md` §8.
