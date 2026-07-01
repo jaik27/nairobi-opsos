@@ -177,9 +177,9 @@ type PRDetailRow = {
     description: string | null
     qty: number
     uom: string | null
-    // PostgREST returns many-to-one joins as an array even for a single row;
-    // access via [0] in the mapping below.
-    stock_items: Array<{ sku: string; name: string }>
+    // PostgREST returns the many-to-one join as an array when the FK is set,
+    // and null when stock_item_id is null (free-text lines). Access via ?.[0].
+    stock_items: Array<{ sku: string; name: string }> | null
   }>
   purchase_request_status_history: Array<{
     id: string
@@ -228,8 +228,8 @@ export async function fetchPurchaseRequestDetail(id: string): Promise<PurchaseRe
       description: l.description,
       qty: l.qty,
       uom: l.uom,
-      stockItemSku: l.stock_items[0]?.sku ?? null,
-      stockItemName: l.stock_items[0]?.name ?? null,
+      stockItemSku: l.stock_items?.[0]?.sku ?? null,
+      stockItemName: l.stock_items?.[0]?.name ?? null,
     })),
     history: [...row.purchase_request_status_history]
       .sort((a, b) => a.changed_at.localeCompare(b.changed_at))
